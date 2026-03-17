@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group = 'schoolday'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Selenium WebDriver
+    testImplementation 'org.seleniumhq.selenium:selenium-java:4.20.0'
+
+    // WebDriverManager (auto-downloads ChromeDriver)
+    testImplementation 'io.github.bonigarcia:webdrivermanager:5.8.0'
+
+    // JUnit 5 (keep what you already have)
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.register('inspectPage', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.schoolday.qa.util.PageInspector'
+}
