@@ -156,6 +156,24 @@ class RecoveryCodeTest extends BaseTest {
 
     @Test
     @Order(8)
+    void testSuccessfulRecoveryCodeLogin() throws Exception {
+        String recoveryCode = consumeRecoveryCode();
+
+        mfaPage.clickRecoveryCodeLink();
+
+        RecoveryCodePage recoveryCodePage = new RecoveryCodePage(driver);
+        recoveryCodePage.waitForPage();
+        recoveryCodePage.enterRecoveryCode(recoveryCode);
+        recoveryCodePage.clickConfirm();
+
+        wait.until(d -> d.getCurrentUrl().contains("/admin/institutions"));
+
+        assertEquals("https://connect-qa.gg4l.com/admin/institutions", driver.getCurrentUrl(),
+                "Should redirect to /admin/institutions after successful recovery code login");
+    }
+
+    @Test
+    @Order(9)
     void testAlreadyUsedRecoveryCode() throws Exception {
         String usedCode = getUsedRecoveryCode();
 
@@ -174,23 +192,5 @@ class RecoveryCodeTest extends BaseTest {
 
         assertTrue(hasHttpStatus(403),
                 "Server should respond with 403 for already-used recovery code");
-    }
-
-    @Test
-    @Order(9)
-    void testSuccessfulRecoveryCodeLogin() throws Exception {
-        String recoveryCode = consumeRecoveryCode();
-
-        mfaPage.clickRecoveryCodeLink();
-
-        RecoveryCodePage recoveryCodePage = new RecoveryCodePage(driver);
-        recoveryCodePage.waitForPage();
-        recoveryCodePage.enterRecoveryCode(recoveryCode);
-        recoveryCodePage.clickConfirm();
-
-        wait.until(d -> d.getCurrentUrl().contains("/admin/institutions"));
-
-        assertEquals("https://connect-qa.gg4l.com/admin/institutions", driver.getCurrentUrl(),
-                "Should redirect to /admin/institutions after successful recovery code login");
     }
 }

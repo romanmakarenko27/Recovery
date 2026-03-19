@@ -11,10 +11,10 @@ repositories {
 
 dependencies {
     // Selenium WebDriver
-    testImplementation 'org.seleniumhq.selenium:selenium-java:4.20.0'
+    testImplementation 'org.seleniumhq.selenium:selenium-java:4.41.0'
 
     // WebDriverManager (auto-downloads ChromeDriver)
-    testImplementation 'io.github.bonigarcia:webdrivermanager:5.8.0'
+    testImplementation 'io.github.bonigarcia:webdrivermanager:6.3.3'
 
     // JUnit 5 (keep what you already have)
     testImplementation platform('org.junit:junit-bom:5.10.0')

@@ -33,7 +33,7 @@ public abstract class BaseTest {
     private static final Path CODES_FILE = Path.of("SchoolDay_reset_codes.txt");
 
     @BeforeEach
-    void setUp() throws IOException {
+    protected void setUp() throws IOException {
         config = loadProperties();
 
         WebDriverManager.chromedriver().setup();
@@ -54,7 +54,7 @@ public abstract class BaseTest {
     }
 
     @AfterEach
-    void tearDown() {
+    protected void tearDown() {
         if (driver != null) {
             driver.quit();
         }
@@ -144,6 +144,14 @@ public abstract class BaseTest {
         }
 
         return false;
+    }
+
+    /**
+     * Saves newly generated recovery codes to SchoolDay_reset_codes.txt.
+     * Overwrites the entire file because generating new codes invalidates all previous codes.
+     */
+    protected void saveNewRecoveryCodes(List<String> codes) throws IOException {
+        Files.write(CODES_FILE, codes);
     }
 
     private Properties loadProperties() throws IOException {
