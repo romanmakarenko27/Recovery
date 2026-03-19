@@ -147,6 +147,16 @@ public abstract class BaseTest {
     }
 
     /**
+     * Counts unused (not USED:-prefixed, not blank) recovery codes in the codes file.
+     */
+    protected static long countUnusedCodes() throws IOException {
+        return Files.readAllLines(CODES_FILE).stream()
+                .map(String::trim)
+                .filter(l -> !l.isBlank() && !l.startsWith("USED:"))
+                .count();
+    }
+
+    /**
      * Saves newly generated recovery codes to SchoolDay_reset_codes.txt.
      * Overwrites the entire file because generating new codes invalidates all previous codes.
      */
