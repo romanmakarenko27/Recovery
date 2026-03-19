@@ -11,18 +11,10 @@ import org.junit.jupiter.api.*;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@Order(2)
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 class RecoveryCodeTest extends BaseTest {
-
-    /** Code consumed by test 8 — shared with UsedCodeTests via static field. */
-    private static String lastConsumedCode;
-
-    /** Set true after test 9 regenerates codes — old codes (including lastConsumedCode) are invalidated. */
-    private static boolean codesRegenerated = false;
 
     @Override
     @BeforeEach
@@ -134,7 +126,7 @@ class RecoveryCodeTest extends BaseTest {
     @Order(2)
     @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    @DisplayName("Validation & Functional Tests (5-9)")
+    @DisplayName("Validation & Functional Tests (5-10)")
     class ValidationAndLoginTests {
 
         private RecoveryCodePage recoveryCodePage;
@@ -205,13 +197,40 @@ class RecoveryCodeTest extends BaseTest {
 
             assertTrue(hasHttpStatus(403),
                     "Server should respond with 403 for invalid recovery code");
+
+
         }
 
         @Test
         @Order(8)
+        void testAlreadyUsedRecoveryCode() throws Exception {
+            assumeTrue(hasUsedRecoveryCodes(),
+                    "No USED recovery codes in file — skipping");
+
+            recoveryCodePage.dismissSnackbar();
+
+            String usedCode = getUsedRecoveryCode();
+            recoveryCodePage.enterRecoveryCode(usedCode);
+            recoveryCodePage.clickConfirm();
+
+            assertTrue(recoveryCodePage.hasSnackbarError(),
+                    "Snackbar error should be shown for already-used recovery code");
+
+            String errorMessage = recoveryCodePage.getSnackbarErrorMessage();
+            assertFalse(errorMessage.isBlank(), "Error message should not be blank");
+
+            assertTrue(hasHttpStatus(403),
+                    "Server should respond with 403 for already-used recovery code");
+
+
+        }
+
+        @Test
+        @Order(9)
         void testSuccessfulRecoveryCodeLogin() throws Exception {
+            recoveryCodePage.dismissSnackbar();
+
             String recoveryCode = consumeRecoveryCode();
-            lastConsumedCode = recoveryCode;
 
             recoveryCodePage.enterRecoveryCode(recoveryCode);
             recoveryCodePage.clickConfirm();
@@ -223,13 +242,13 @@ class RecoveryCodeTest extends BaseTest {
         }
 
         @Test
-        @Order(9)
+        @Order(10)
         void testRegenerateCodesIfNeeded() throws Exception {
             long unusedCount = countUnusedCodes();
-            assumeTrue(unusedCount <= 1,
+            assumeTrue(unusedCount == 0,
                     "Skipping regeneration: " + unusedCount + " unused codes remain");
 
-            // Already authenticated at /admin/institutions after test 8
+            // Already authenticated at /admin/institutions after test 9
             userProfilePage.navigateTo(config.getProperty("base.url"));
             userProfilePage.clickSecuritySettingsTab();
 
@@ -247,61 +266,10 @@ class RecoveryCodeTest extends BaseTest {
 
             regenerateCodesDialog.downloadAndClose();
 
-            codesRegenerated = true;
-
             assertFalse(newCodes.isEmpty(), "New recovery codes should be generated");
             assertEquals(6, newCodes.size(),
                     "Should generate exactly 6 recovery codes, but got " + newCodes.size()
                             + ": " + newCodes);
-        }
-    }
-
-    @Nested
-    @Order(3)
-    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-    @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    @DisplayName("Used Code Test (10)")
-    class UsedCodeTests {
-
-        private RecoveryCodePage recoveryCodePage;
-
-        @BeforeAll
-        void initDriver() throws Exception {
-            assumeFalse(codesRegenerated,
-                    "Skipping: old codes invalidated by regeneration");
-            assertNotNull(lastConsumedCode,
-                    "No consumed code available — test 8 must run before test 10");
-
-            initializeDriver();
-            LoginPage loginPage = new LoginPage(driver);
-            loginPage.open(getBaseUrl());
-            loginPage.login(getEmail(), getPassword());
-            MfaPage mfaPage = new MfaPage(driver);
-            mfaPage.waitForPage();
-            mfaPage.clickRecoveryCodeLink();
-            recoveryCodePage = new RecoveryCodePage(driver);
-            recoveryCodePage.waitForPage();
-        }
-
-        @AfterAll
-        void closeDriver() {
-            destroyDriver();
-        }
-
-        @Test
-        @Order(10)
-        void testAlreadyUsedRecoveryCode() {
-            recoveryCodePage.enterRecoveryCode(lastConsumedCode);
-            recoveryCodePage.clickConfirm();
-
-            assertTrue(recoveryCodePage.hasSnackbarError(),
-                    "Snackbar error should be shown for already-used recovery code");
-
-            String errorMessage = recoveryCodePage.getSnackbarErrorMessage();
-            assertFalse(errorMessage.isBlank(), "Error message should not be blank");
-
-            assertTrue(hasHttpStatus(403),
-                    "Server should respond with 403 for already-used recovery code");
         }
     }
 }

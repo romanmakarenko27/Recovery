@@ -24,6 +24,8 @@ public class RecoveryCodePage {
     private final By validationError = By.cssSelector("ngc-recovery-code-login .mat-form-field-invalid");
     private final By snackbarContainer = By.cssSelector(
             "simple-snack-bar, .mat-mdc-snack-bar-container, .mat-snack-bar-container");
+    private final By snackbarActionButton = By.cssSelector(
+            ".mat-simple-snackbar-action button, .mat-mdc-snack-bar-action button");
 
     public RecoveryCodePage(WebDriver driver) {
         this.driver = driver;
@@ -123,6 +125,18 @@ public class RecoveryCodePage {
         new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.visibilityOfElementLocated(snackbarContainer));
         return driver.findElement(snackbarContainer).getText();
+    }
+
+    public void dismissSnackbar() {
+        try {
+            WebElement actionButton = new WebDriverWait(driver, Duration.ofSeconds(3))
+                    .until(ExpectedConditions.elementToBeClickable(snackbarActionButton));
+            actionButton.click();
+            new WebDriverWait(driver, Duration.ofSeconds(3))
+                    .until(ExpectedConditions.invisibilityOfElementLocated(snackbarContainer));
+        } catch (Exception ignored) {
+            // snackbar already gone
+        }
     }
 
     public String getContactSupportHref() {

@@ -147,6 +147,14 @@ public abstract class BaseTest {
     }
 
     /**
+     * Returns true if the codes file contains at least one USED: code.
+     */
+    protected static boolean hasUsedRecoveryCodes() throws IOException {
+        return Files.readAllLines(CODES_FILE).stream()
+                .anyMatch(l -> l.trim().startsWith("USED:"));
+    }
+
+    /**
      * Counts unused (not USED:-prefixed, not blank) recovery codes in the codes file.
      */
     protected static long countUnusedCodes() throws IOException {
