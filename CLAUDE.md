@@ -31,7 +31,7 @@ Project root:
 ## Running Tests
 ```
 gradlew.bat test
-gradlew.bat test --tests "com.schoolday.qa.tests.RecoveryCodeTest"
+gradlew.bat test --tests "com.schoolday.qa.tests.RecoveryCodeTest_Vendor"
 gradlew.bat test --tests "*.RecoveryCodeTest.testMethodName"
 ```
 

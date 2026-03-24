@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
-class RecoveryCodeTest extends BaseTest {
+class RecoveryCodeTest_Vendor extends BaseTest {
 
     @Override
     @BeforeEach
@@ -126,8 +126,8 @@ class RecoveryCodeTest extends BaseTest {
     @Order(2)
     @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    @DisplayName("Validation & Functional Tests (5-10)")
-    class ValidationAndLoginTests {
+    @DisplayName("Validation, Login & Regenerate Tests (5-15)")
+    class ValidationLoginAndRegenerateTests {
 
         private RecoveryCodePage recoveryCodePage;
         private UserProfilePage userProfilePage;
@@ -197,8 +197,6 @@ class RecoveryCodeTest extends BaseTest {
 
             assertTrue(hasHttpStatus(403),
                     "Server should respond with 403 for invalid recovery code");
-
-
         }
 
         @Test
@@ -221,8 +219,6 @@ class RecoveryCodeTest extends BaseTest {
 
             assertTrue(hasHttpStatus(403),
                     "Server should respond with 403 for already-used recovery code");
-
-
         }
 
         @Test
@@ -243,33 +239,120 @@ class RecoveryCodeTest extends BaseTest {
 
         @Test
         @Order(10)
-        void testRegenerateCodesIfNeeded() throws Exception {
-            long unusedCount = countUnusedCodes();
-            assumeTrue(unusedCount == 0,
-                    "Skipping regeneration: " + unusedCount + " unused codes remain");
+        void testNavigateToMyProfile() {
+            userProfilePage.clickUserMenu();
+            userProfilePage.clickMyProfile();
 
-            // Already authenticated at /admin/institutions after test 9
-            userProfilePage.navigateTo(config.getProperty("base.url"));
+            assertTrue(driver.getCurrentUrl().contains("/user/profile"),
+                    "Should navigate to user profile page");
+            assertTrue(userProfilePage.isTabGroupDisplayed(), "Tab group should be visible");
+            assertTrue(userProfilePage.isProfileTabDisplayed(), "Profile tab should be visible");
+            assertTrue(userProfilePage.isSecuritySettingsTabDisplayed(), "Security Settings tab should be visible");
+            assertTrue(userProfilePage.isEmailNotificationsTabDisplayed(), "Email Notifications tab should be visible");
+            assertTrue(userProfilePage.isEditOrganizationTabDisplayed(), "Edit Organization tab should be visible");
+        }
+
+        @Test
+        @Order(11)
+        void testNavigateToSecuritySettingsAndOpenDialog() {
             userProfilePage.clickSecuritySettingsTab();
 
+            assertTrue(userProfilePage.isSecuritySettingsContentLoaded(),
+                    "Security settings content should be loaded");
+
             regenerateCodesDialog.clickRegenerateButton();
-            regenerateCodesDialog.enterPassword(getPassword());
+
+            assertTrue(regenerateCodesDialog.isDialogDisplayed(),
+                    "Regenerate Recovery Codes dialog should be displayed");
+        }
+
+        @Test
+        @Order(12)
+        void testRegenerateDialogElements() {
+            assertTrue(regenerateCodesDialog.isDialogDisplayed(), "Dialog should be displayed");
+            assertTrue(regenerateCodesDialog.isPasswordInputDisplayed(), "Password input should be visible");
+            assertTrue(regenerateCodesDialog.isRegenerateButtonDisplayed(), "Regenerate button should be visible");
+            assertTrue(regenerateCodesDialog.isCancelButtonDisplayed(), "Cancel button should be visible");
+
+            String dialogText = regenerateCodesDialog.getDialogText();
+            assertTrue(dialogText.contains("Regenerate Recovery Codes"),
+                    "Dialog should contain title 'Regenerate Recovery Codes'");
+            assertTrue(dialogText.contains("enter your password"),
+                    "Dialog should contain password instruction text");
+            assertTrue(dialogText.contains("Old codes won't work after generating new ones"),
+                    "Dialog should contain warning about old codes");
+        }
+
+        @Test
+        @Order(13)
+        void testRegenerateButtonDisabledWithEmptyPassword() {
+            assertFalse(regenerateCodesDialog.isRegenerateButtonEnabled(),
+                    "Regenerate button should be disabled when password is empty");
+        }
+
+        @Test
+        @Order(14)
+        void testPasswordVisibilityToggle() {
+            regenerateCodesDialog.enterPassword("TestPassword");
+
+            assertEquals("password", regenerateCodesDialog.getPasswordInputType(),
+                    "Password input should be masked by default");
+
+            regenerateCodesDialog.clickPasswordToggle();
+
+            assertEquals("text", regenerateCodesDialog.getPasswordInputType(),
+                    "Password should be visible after clicking toggle");
+
+            regenerateCodesDialog.clickPasswordToggle();
+
+            assertEquals("password", regenerateCodesDialog.getPasswordInputType(),
+                    "Password should be masked again after clicking toggle");
+        }
+
+        @Test
+        @Order(15)
+        void testInvalidPasswordThenCancelOrRegenerate() throws Exception {
+            // Dialog is already open from test 14
+            regenerateCodesDialog.enterPassword("WrongPassword123!");
             regenerateCodesDialog.clickRegenerate();
-            regenerateCodesDialog.waitForCodesDialog();
 
-            List<String> newCodes = regenerateCodesDialog.extractNewCodes();
+            assertTrue(regenerateCodesDialog.hasSnackbarError(),
+                    "Error should be shown for invalid password");
+            assertTrue(regenerateCodesDialog.isSnackbarAtBottom(),
+                    "Snackbar should appear at the bottom of the page");
 
-            // Save codes BEFORE asserting — regeneration already invalidated all previous codes
-            if (!newCodes.isEmpty()) {
-                saveNewRecoveryCodes(newCodes);
+            String errorMessage = regenerateCodesDialog.getSnackbarErrorMessage();
+            assertFalse(errorMessage.isBlank(), "Error message should not be blank");
+
+            regenerateCodesDialog.dismissSnackbar();
+
+            if (countUnusedCodes() == 0) {
+                // No codes left — regenerate using the already-open dialog
+                regenerateCodesDialog.enterPassword(getPassword());
+                regenerateCodesDialog.clickRegenerate();
+                regenerateCodesDialog.waitForCodesDialog();
+
+                List<String> newCodes = regenerateCodesDialog.extractNewCodes();
+
+                // Save codes BEFORE asserting — regeneration already invalidated all previous codes
+                if (!newCodes.isEmpty()) {
+                    saveNewRecoveryCodes(newCodes);
+                }
+
+                regenerateCodesDialog.downloadAndClose();
+
+                assertFalse(newCodes.isEmpty(), "New recovery codes should be generated");
+                assertEquals(6, newCodes.size(),
+                        "Should generate exactly 6 recovery codes, but got " + newCodes.size()
+                                + ": " + newCodes);
+            } else {
+                // Codes still available — cancel and close dialog
+                regenerateCodesDialog.clickCancel();
+                regenerateCodesDialog.waitForDialogClosed();
+
+                assertFalse(regenerateCodesDialog.isDialogDisplayed(),
+                        "Dialog should be closed after clicking Cancel");
             }
-
-            regenerateCodesDialog.downloadAndClose();
-
-            assertFalse(newCodes.isEmpty(), "New recovery codes should be generated");
-            assertEquals(6, newCodes.size(),
-                    "Should generate exactly 6 recovery codes, but got " + newCodes.size()
-                            + ": " + newCodes);
         }
     }
 }

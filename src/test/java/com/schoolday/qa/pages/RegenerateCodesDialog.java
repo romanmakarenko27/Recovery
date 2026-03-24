@@ -57,9 +57,12 @@ public class RegenerateCodesDialog {
 
     public boolean isDialogDisplayed() {
         try {
+            driver.manage().timeouts().implicitlyWait(Duration.ZERO);
             return driver.findElement(dialogContainer).isDisplayed();
         } catch (Exception e) {
             return false;
+        } finally {
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         }
     }
 
@@ -198,7 +201,12 @@ public class RegenerateCodesDialog {
     }
 
     public void waitForDialogClosed() {
-        wait.until(ExpectedConditions.invisibilityOfElementLocated(dialogContainer));
+        try {
+            driver.manage().timeouts().implicitlyWait(Duration.ZERO);
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(dialogContainer));
+        } finally {
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+        }
     }
 
     public boolean hasSnackbarError() {
