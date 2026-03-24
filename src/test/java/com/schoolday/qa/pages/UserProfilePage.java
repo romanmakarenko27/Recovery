@@ -86,7 +86,7 @@ public class UserProfilePage {
     }
 
     public String getUserName() {
-        return driver.findElement(userName).getText();
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(userName)).getText();
     }
 
     public void clickSecuritySettingsTab() {

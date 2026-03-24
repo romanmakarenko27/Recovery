@@ -46,11 +46,11 @@ public class RecoveryCodePage {
     }
 
     public String getHeadingText() {
-        return driver.findElement(heading).getText();
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(heading)).getText();
     }
 
     public String getDescriptionText() {
-        return driver.findElement(descriptionText).getText();
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(descriptionText)).getText();
     }
 
     public boolean isRecoveryCodeInputDisplayed() {
@@ -70,22 +70,22 @@ public class RecoveryCodePage {
     }
 
     public RecoveryCodePage enterRecoveryCode(String code) {
-        WebElement input = driver.findElement(recoveryCodeInput);
+        WebElement input = wait.until(ExpectedConditions.visibilityOfElementLocated(recoveryCodeInput));
         input.clear();
         input.sendKeys(code);
         return this;
     }
 
     public void clickConfirm() {
-        driver.findElement(confirmButton).click();
+        wait.until(ExpectedConditions.elementToBeClickable(confirmButton)).click();
     }
 
     public void clickBackToMfa() {
-        driver.findElement(backToMfaLink).click();
+        wait.until(ExpectedConditions.elementToBeClickable(backToMfaLink)).click();
     }
 
     public void clickContactSupport() {
-        driver.findElement(contactSupportLink).click();
+        wait.until(ExpectedConditions.elementToBeClickable(contactSupportLink)).click();
     }
 
     public String getValidationError() {
@@ -140,6 +140,6 @@ public class RecoveryCodePage {
     }
 
     public String getContactSupportHref() {
-        return driver.findElement(contactSupportLink).getAttribute("href");
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(contactSupportLink)).getAttribute("href");
     }
 }

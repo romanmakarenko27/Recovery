@@ -42,11 +42,11 @@ public class MfaPage {
     }
 
     public String getHeadingText() {
-        return driver.findElement(heading).getText();
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(heading)).getText();
     }
 
     public String getSmsInfoText() {
-        return driver.findElement(smsInfoText).getText();
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(smsInfoText)).getText();
     }
 
     public boolean isCodeInputDisplayed() {
@@ -62,7 +62,7 @@ public class MfaPage {
     }
 
     public String getSendNewCodeButtonText() {
-        return driver.findElement(sendNewCodeButton).getText();
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(sendNewCodeButton)).getText();
     }
 
     public boolean isHavingProblemsTextDisplayed() {
@@ -79,6 +79,6 @@ public class MfaPage {
     }
 
     public void clickBackToSignIn() {
-        driver.findElement(backToSignInLink).click();
+        wait.until(ExpectedConditions.elementToBeClickable(backToSignInLink)).click();
     }
 }

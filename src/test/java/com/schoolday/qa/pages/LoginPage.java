@@ -2,6 +2,7 @@ package com.schoolday.qa.pages;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -29,19 +30,21 @@ public class LoginPage {
     }
 
     public LoginPage enterEmail(String email) {
-        driver.findElement(emailInput).clear();
-        driver.findElement(emailInput).sendKeys(email);
+        WebElement input = wait.until(ExpectedConditions.visibilityOfElementLocated(emailInput));
+        input.clear();
+        input.sendKeys(email);
         return this;
     }
 
     public LoginPage enterPassword(String password) {
-        driver.findElement(passwordInput).clear();
-        driver.findElement(passwordInput).sendKeys(password);
+        WebElement input = wait.until(ExpectedConditions.visibilityOfElementLocated(passwordInput));
+        input.clear();
+        input.sendKeys(password);
         return this;
     }
 
     public void clickSignIn() {
-        driver.findElement(signInButton).click();
+        wait.until(ExpectedConditions.elementToBeClickable(signInButton)).click();
     }
 
     public void login(String email, String password) {

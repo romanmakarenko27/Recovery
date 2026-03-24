@@ -57,12 +57,9 @@ public class RegenerateCodesDialog {
 
     public boolean isDialogDisplayed() {
         try {
-            driver.manage().timeouts().implicitlyWait(Duration.ZERO);
             return driver.findElement(dialogContainer).isDisplayed();
         } catch (Exception e) {
             return false;
-        } finally {
-            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         }
     }
 
@@ -180,11 +177,11 @@ public class RegenerateCodesDialog {
     }
 
     public String getDialogText() {
-        return driver.findElement(dialogContainer).getText();
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(dialogContainer)).getText();
     }
 
     public String getPasswordInputType() {
-        return driver.findElement(passwordInput).getAttribute("type");
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(passwordInput)).getAttribute("type");
     }
 
     public void clickPasswordToggle() {
@@ -201,12 +198,7 @@ public class RegenerateCodesDialog {
     }
 
     public void waitForDialogClosed() {
-        try {
-            driver.manage().timeouts().implicitlyWait(Duration.ZERO);
-            wait.until(ExpectedConditions.invisibilityOfElementLocated(dialogContainer));
-        } finally {
-            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
-        }
+        wait.until(ExpectedConditions.invisibilityOfElementLocated(dialogContainer));
     }
 
     public boolean hasSnackbarError() {
@@ -240,7 +232,6 @@ public class RegenerateCodesDialog {
 
     public void dismissSnackbar() {
         try {
-            driver.manage().timeouts().implicitlyWait(Duration.ZERO);
             WebElement action = driver.findElement(
                     By.cssSelector("simple-snack-bar button, .mat-simple-snackbar-action button, .mat-mdc-snack-bar-action button"));
             action.click();
@@ -249,8 +240,6 @@ public class RegenerateCodesDialog {
                             By.cssSelector("simple-snack-bar, .mat-mdc-snack-bar-container")));
         } catch (Exception e) {
             // Snackbar may auto-dismiss
-        } finally {
-            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         }
     }
 }
