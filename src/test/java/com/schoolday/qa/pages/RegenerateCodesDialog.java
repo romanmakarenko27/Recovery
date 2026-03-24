@@ -27,6 +27,8 @@ public class RegenerateCodesDialog {
             "[data-testid='verify-password-regenerate-btn']");
     private final By cancelButton = By.cssSelector(
             "[data-testid='verify-password-cancel-btn']");
+    private final By passwordToggleButton = By.cssSelector(
+            "[data-testid='verify-password-toggle-password-visibility-icon']");
 
     // Locators — new recovery codes display dialog
     private final By codesList = By.cssSelector(
@@ -171,6 +173,73 @@ public class RegenerateCodesDialog {
             return driver.findElement(dialogContainer).getAttribute("innerHTML");
         } catch (Exception e) {
             return "";
+        }
+    }
+
+    public String getDialogText() {
+        return driver.findElement(dialogContainer).getText();
+    }
+
+    public String getPasswordInputType() {
+        return driver.findElement(passwordInput).getAttribute("type");
+    }
+
+    public void clickPasswordToggle() {
+        WebElement toggle = wait.until(ExpectedConditions.elementToBeClickable(passwordToggleButton));
+        toggle.click();
+    }
+
+    public boolean isRegenerateButtonEnabled() {
+        try {
+            return driver.findElement(regenerateDialogButton).isEnabled();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void waitForDialogClosed() {
+        wait.until(ExpectedConditions.invisibilityOfElementLocated(dialogContainer));
+    }
+
+    public boolean hasSnackbarError() {
+        try {
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            shortWait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector("simple-snack-bar, .mat-mdc-snack-bar-container, .mat-snack-bar-container")));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isSnackbarAtBottom() {
+        WebElement snackbar = driver.findElement(
+                By.cssSelector("simple-snack-bar, .mat-mdc-snack-bar-container, .mat-snack-bar-container"));
+        int snackbarY = snackbar.getLocation().getY() + snackbar.getSize().getHeight();
+        int viewportHeight = driver.manage().window().getSize().getHeight();
+        return snackbarY > viewportHeight / 2;
+    }
+
+    public String getSnackbarErrorMessage() {
+        try {
+            WebElement snackbar = driver.findElement(
+                    By.cssSelector("simple-snack-bar span, .mat-mdc-snack-bar-label, .mat-simple-snackbar"));
+            return snackbar.getText().trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public void dismissSnackbar() {
+        try {
+            WebElement action = driver.findElement(
+                    By.cssSelector("simple-snack-bar button, .mat-simple-snackbar-action button, .mat-mdc-snack-bar-action button"));
+            action.click();
+            new WebDriverWait(driver, Duration.ofSeconds(3))
+                    .until(ExpectedConditions.invisibilityOfElementLocated(
+                            By.cssSelector("simple-snack-bar, .mat-mdc-snack-bar-container")));
+        } catch (Exception e) {
+            // Snackbar may auto-dismiss
         }
     }
 }

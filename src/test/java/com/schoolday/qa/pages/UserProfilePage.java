@@ -16,6 +16,7 @@ public class UserProfilePage {
     // Locators — toolbar / user menu
     private final By userMenuButton = By.cssSelector("[data-testid='standard-page-user-menu-trigger-btn']");
     private final By userName = By.cssSelector("[data-testid='standard-page-user-name']");
+    private final By myProfileMenuItem = By.xpath("//*[normalize-space()='My Profile']");
 
     // Locators — profile page
     private final By tabGroup = By.cssSelector("[data-testid='user-profile-tab-group-tabs']");
@@ -116,5 +117,12 @@ public class UserProfilePage {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public void clickMyProfile() {
+        WebElement item = wait.until(ExpectedConditions.elementToBeClickable(myProfileMenuItem));
+        item.click();
+        wait.until(ExpectedConditions.urlContains("/user/profile"));
+        waitForPage();
     }
 }
