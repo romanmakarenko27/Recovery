@@ -232,6 +232,7 @@ public class RegenerateCodesDialog {
 
     public void dismissSnackbar() {
         try {
+            driver.manage().timeouts().implicitlyWait(Duration.ZERO);
             WebElement action = driver.findElement(
                     By.cssSelector("simple-snack-bar button, .mat-simple-snackbar-action button, .mat-mdc-snack-bar-action button"));
             action.click();
@@ -240,6 +241,8 @@ public class RegenerateCodesDialog {
                             By.cssSelector("simple-snack-bar, .mat-mdc-snack-bar-container")));
         } catch (Exception e) {
             // Snackbar may auto-dismiss
+        } finally {
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         }
     }
 }

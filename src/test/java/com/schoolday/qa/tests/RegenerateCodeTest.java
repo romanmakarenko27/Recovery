@@ -8,7 +8,10 @@ import com.schoolday.qa.pages.RegenerateCodesDialog;
 import com.schoolday.qa.pages.UserProfilePage;
 import org.junit.jupiter.api.*;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -162,8 +165,9 @@ class RegenerateCodeTest extends BaseTest {
 
     @Test
     @Order(9)
-    @DisplayName("Invalid password shows error")
-    void testInvalidPasswordSubmission() {
+    @DisplayName("Invalid password shows error, then cancel or regenerate codes")
+    void testInvalidPasswordThenCancelOrRegenerate() throws Exception {
+        // Dialog is already open from test 8
         regenerateCodesDialog.enterPassword("WrongPassword123!");
         regenerateCodesDialog.clickRegenerate();
 
@@ -176,16 +180,33 @@ class RegenerateCodeTest extends BaseTest {
         assertFalse(errorMessage.isBlank(), "Error message should not be blank");
 
         regenerateCodesDialog.dismissSnackbar();
-    }
 
-    @Test
-    @Order(10)
-    @DisplayName("Cancel button closes dialog")
-    void testCancelClosesDialog() {
-        regenerateCodesDialog.clickCancel();
-        regenerateCodesDialog.waitForDialogClosed();
+        if (countUnusedCodes() == 0) {
+            // No codes left — regenerate using the already-open dialog
+            regenerateCodesDialog.enterPassword(getPassword());
+            regenerateCodesDialog.clickRegenerate();
+            regenerateCodesDialog.waitForCodesDialog();
 
-        assertFalse(regenerateCodesDialog.isDialogDisplayed(),
-                "Dialog should be closed after clicking Cancel");
+            List<String> newCodes = regenerateCodesDialog.extractNewCodes();
+
+            // Save codes BEFORE asserting — regeneration already invalidated all previous codes
+            if (!newCodes.isEmpty()) {
+                saveNewRecoveryCodes(newCodes);
+            }
+
+            regenerateCodesDialog.downloadAndClose();
+
+            assertFalse(newCodes.isEmpty(), "New recovery codes should be generated");
+            assertEquals(6, newCodes.size(),
+                    "Should generate exactly 6 recovery codes, but got " + newCodes.size()
+                            + ": " + newCodes);
+        } else {
+            // Codes still available — cancel and close dialog
+            regenerateCodesDialog.clickCancel();
+            regenerateCodesDialog.waitForDialogClosed();
+
+            assertFalse(regenerateCodesDialog.isDialogDisplayed(),
+                    "Dialog should be closed after clicking Cancel");
+        }
     }
 }
