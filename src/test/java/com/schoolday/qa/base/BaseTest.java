@@ -82,7 +82,7 @@ public abstract class BaseTest {
         int codeIndex = -1;
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
-            if (!line.isBlank() && !line.startsWith("USED:")) {
+            if (!line.isBlank() && !line.startsWith("USED:") && !line.startsWith("INVALIDATED:")) {
                 code = line;
                 codeIndex = i;
                 break;
@@ -159,16 +159,51 @@ public abstract class BaseTest {
     protected static long countUnusedCodes() throws IOException {
         return Files.readAllLines(CODES_FILE).stream()
                 .map(String::trim)
-                .filter(l -> !l.isBlank() && !l.startsWith("USED:"))
+                .filter(l -> !l.isBlank() && !l.startsWith("USED:") && !l.startsWith("INVALIDATED:"))
                 .count();
     }
 
     /**
      * Saves newly generated recovery codes to SchoolDay_reset_codes.txt.
-     * Overwrites the entire file because generating new codes invalidates all previous codes.
+     * Marks old unused codes as INVALIDATED: (since regeneration invalidates them on the server),
+     * keeps USED: codes for reference, and appends new codes at the end.
      */
     protected void saveNewRecoveryCodes(List<String> codes) throws IOException {
-        Files.write(CODES_FILE, codes);
+        List<String> existingLines = Files.exists(CODES_FILE)
+                ? new ArrayList<>(Files.readAllLines(CODES_FILE))
+                : new ArrayList<>();
+
+        // Collect all old codes (USED + INVALIDATED + unused) and keep only the last 6
+        List<String> oldCodes = existingLines.stream()
+                .map(String::trim)
+                .filter(l -> !l.isBlank())
+                .map(l -> {
+                    if (l.startsWith("USED:")) return l;
+                    if (l.startsWith("INVALIDATED:")) return "INVALIDATED:" + l.substring("INVALIDATED:".length());
+                    return "INVALIDATED:" + l;  // mark old unused codes as invalidated
+                })
+                .toList();
+
+        // Keep only the last 6 old codes
+        List<String> kept = new ArrayList<>(
+                oldCodes.subList(Math.max(0, oldCodes.size() - 6), oldCodes.size()));
+
+        // Append new codes
+        kept.addAll(codes);
+        Files.write(CODES_FILE, kept);
+    }
+
+    /**
+     * Returns all old codes (USED and INVALIDATED) from the codes file for comparison.
+     */
+    protected static List<String> getOldCodes() throws IOException {
+        if (!Files.exists(CODES_FILE)) return List.of();
+        return Files.readAllLines(CODES_FILE).stream()
+                .map(String::trim)
+                .filter(l -> l.startsWith("USED:") || l.startsWith("INVALIDATED:"))
+                .map(l -> l.startsWith("USED:") ? l.substring("USED:".length()) :
+                        l.substring("INVALIDATED:".length()))
+                .toList();
     }
 
     private Properties loadProperties() throws IOException {

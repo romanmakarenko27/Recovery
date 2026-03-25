@@ -8,6 +8,7 @@ import com.schoolday.qa.pages.RegenerateCodesDialog;
 import com.schoolday.qa.pages.UserProfilePage;
 import org.junit.jupiter.api.*;
 
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -126,12 +127,13 @@ class RecoveryCodeTest_Vendor extends BaseTest {
     @Order(2)
     @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    @DisplayName("Validation, Login & Regenerate Tests (5-15)")
+    @DisplayName("Validation, Login & Regenerate Tests (5-23)")
     class ValidationLoginAndRegenerateTests {
 
         private RecoveryCodePage recoveryCodePage;
         private UserProfilePage userProfilePage;
         private RegenerateCodesDialog regenerateCodesDialog;
+        private List<String> newCodes;
 
         @BeforeAll
         void initDriver() throws Exception {
@@ -332,14 +334,14 @@ class RecoveryCodeTest_Vendor extends BaseTest {
                 regenerateCodesDialog.clickRegenerate();
                 regenerateCodesDialog.waitForCodesDialog();
 
-                List<String> newCodes = regenerateCodesDialog.extractNewCodes();
+                newCodes = regenerateCodesDialog.extractNewCodes();
 
                 // Save codes BEFORE asserting — regeneration already invalidated all previous codes
                 if (!newCodes.isEmpty()) {
                     saveNewRecoveryCodes(newCodes);
                 }
 
-                regenerateCodesDialog.downloadAndClose();
+                // Dialog stays open for tests 16-23 to verify codes dialog
 
                 assertFalse(newCodes.isEmpty(), "New recovery codes should be generated");
                 assertEquals(6, newCodes.size(),
@@ -353,6 +355,164 @@ class RecoveryCodeTest_Vendor extends BaseTest {
                 assertFalse(regenerateCodesDialog.isDialogDisplayed(),
                         "Dialog should be closed after clicking Cancel");
             }
+        }
+
+        @Test
+        @Order(16)
+        void testCodesDialogElementsDisplayed() {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            assertEquals("Recovery codes", regenerateCodesDialog.getCodesDialogTitle(),
+                    "Dialog title should be 'Recovery codes'");
+
+            String description = regenerateCodesDialog.getCodesDialogDescription();
+            assertTrue(description.contains("lose access to your device"),
+                    "Description should mention losing access to device");
+            assertTrue(description.contains("Each code can be used only once"),
+                    "Description should mention each code can be used only once");
+
+            assertTrue(regenerateCodesDialog.isWarningIconDisplayed(),
+                    "Warning icon should be displayed");
+            String warningText = regenerateCodesDialog.getCodesDialogWarningText();
+            assertTrue(warningText.contains("Put these in a safe spot"),
+                    "Warning should mention putting codes in a safe spot");
+
+            String instructionText = regenerateCodesDialog.getCodesDialogInstructionText();
+            assertTrue(instructionText.contains("Download, print, or copy"),
+                    "Instruction text should mention download, print, or copy");
+        }
+
+        @Test
+        @Order(17)
+        void testSixUniqueCodesDifferentFromOld() throws Exception {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            assertEquals(6, newCodes.size(),
+                    "Should have exactly 6 recovery codes");
+
+            // All codes should be non-blank
+            for (String code : newCodes) {
+                assertFalse(code.isBlank(), "Each recovery code should be non-blank");
+            }
+
+            // All codes should be unique
+            assertEquals(newCodes.size(), new HashSet<>(newCodes).size(),
+                    "All recovery codes should be unique");
+
+            // New codes should differ from all old codes (USED + INVALIDATED)
+            List<String> oldCodes = getOldCodes();
+            for (String code : newCodes) {
+                assertFalse(oldCodes.contains(code),
+                        "New code '" + code + "' should not match any old code");
+            }
+        }
+
+        @Test
+        @Order(18)
+        void testActionButtonsDisplayed() {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            assertTrue(regenerateCodesDialog.isDownloadButtonDisplayed(),
+                    "Download button should be visible");
+            assertEquals("file_download", regenerateCodesDialog.getDownloadButtonIconText(),
+                    "Download button should have file_download icon");
+            assertEquals("Download Recovery codes", regenerateCodesDialog.getDownloadButtonAriaLabel(),
+                    "Download button should have correct aria-label");
+
+            assertTrue(regenerateCodesDialog.isPrintButtonDisplayed(),
+                    "Print button should be visible");
+            assertEquals("print", regenerateCodesDialog.getPrintButtonIconText(),
+                    "Print button should have print icon");
+            assertEquals("Print Recovery codes", regenerateCodesDialog.getPrintButtonAriaLabel(),
+                    "Print button should have correct aria-label");
+
+            assertTrue(regenerateCodesDialog.isCopyButtonDisplayed(),
+                    "Copy button should be visible");
+            assertEquals("content_copy", regenerateCodesDialog.getCopyButtonIconText(),
+                    "Copy button should have content_copy icon");
+            assertEquals("Copy Recovery codes", regenerateCodesDialog.getCopyButtonAriaLabel(),
+                    "Copy button should have correct aria-label");
+        }
+
+        @Test
+        @Order(19)
+        void testClickOutsideDialogDoesNotClose() {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            regenerateCodesDialog.clickBackdrop();
+
+            assertTrue(regenerateCodesDialog.isCodesDialogDisplayed(),
+                    "Codes dialog should remain open after clicking outside");
+        }
+
+        @Test
+        @Order(20)
+        void testCloseButtonDisabledBeforeSaveAction() {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            assertTrue(regenerateCodesDialog.isCloseButtonDisplayed(),
+                    "Close button should be visible");
+            assertFalse(regenerateCodesDialog.isCloseButtonEnabled(),
+                    "Close button should be disabled before clicking Download/Print/Copy");
+        }
+
+        @Test
+        @Order(21)
+        void testDownloadEnablesCloseButton() {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            regenerateCodesDialog.clickDownloadButton();
+
+            assertTrue(regenerateCodesDialog.isCloseButtonEnabled(),
+                    "Close button should be enabled after clicking Download");
+        }
+
+        @Test
+        @Order(22)
+        void testCopyShowsSnackbarAndCodesMatch() {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            regenerateCodesDialog.clickCopyButton();
+
+            assertTrue(regenerateCodesDialog.hasCopySnackbar(),
+                    "Snackbar should appear after clicking Copy");
+            String snackbarMessage = regenerateCodesDialog.getCopySnackbarMessage();
+            assertTrue(snackbarMessage.contains("Copied to Clipboard"),
+                    "Snackbar should show 'Copied to Clipboard', but was: " + snackbarMessage);
+
+            // Read clipboard via CDP and compare with displayed codes
+            List<String> copiedCodes = regenerateCodesDialog.readClipboardCodes();
+            assertEquals(newCodes.size(), copiedCodes.size(),
+                    "Copied codes count should match displayed codes count");
+            for (int i = 0; i < newCodes.size(); i++) {
+                assertEquals(newCodes.get(i), copiedCodes.get(i),
+                        "Copied code at index " + i + " should match displayed code");
+            }
+        }
+
+        @Test
+        @Order(23)
+        void testCloseDialogAndVerifyCodesSaved() throws Exception {
+            assumeTrue(newCodes != null && !newCodes.isEmpty(),
+                    "No regeneration occurred — skipping codes dialog tests");
+
+            regenerateCodesDialog.dismissSnackbar();
+            regenerateCodesDialog.clickCloseButton();
+
+            assertFalse(regenerateCodesDialog.isDialogDisplayed(),
+                    "Dialog should be closed after clicking Close");
+
+            // Verify codes were persisted to file
+            long unusedCount = countUnusedCodes();
+            assertEquals(6, unusedCount,
+                    "File should contain 6 unused recovery codes after regeneration");
         }
     }
 }

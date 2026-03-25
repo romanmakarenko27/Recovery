@@ -1,14 +1,18 @@
 package com.schoolday.qa.pages;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class RegenerateCodesDialog {
 
@@ -43,6 +47,17 @@ public class RegenerateCodesDialog {
             "[data-testid='recovery-codes-copy-btn']");
     private final By closeButton = By.cssSelector(
             "[data-testid='recovery-codes-close-btn']");
+
+    // Locators — codes dialog text elements
+    private final By codesDialogTitle = By.cssSelector("mat-dialog-container h2.verify-title");
+    private final By codesDialogDescription = By.cssSelector("mat-dialog-container h3");
+    private final By codesDialogWarning = By.cssSelector("mat-dialog-container p.warning-msg");
+    private final By codesDialogWarningIcon = By.cssSelector("mat-dialog-container p.warning-msg mat-icon");
+    private final By codesDialogInstruction = By.cssSelector(
+            "mat-dialog-container div.mt-12.mb-24");
+    private final By backdrop = By.cssSelector(".cdk-overlay-backdrop");
+    private final By snackbarContainer = By.cssSelector(
+            "simple-snack-bar, .mat-mdc-snack-bar-container, .mat-snack-bar-container");
 
     public RegenerateCodesDialog(WebDriver driver) {
         this.driver = driver;
@@ -241,5 +256,151 @@ public class RegenerateCodesDialog {
         } catch (Exception e) {
             // Snackbar may auto-dismiss
         }
+    }
+
+    // --- Codes dialog text verification methods ---
+
+    public String getCodesDialogTitle() {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(codesDialogTitle)).getText();
+    }
+
+    public String getCodesDialogDescription() {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(codesDialogDescription)).getText();
+    }
+
+    public String getCodesDialogWarningText() {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(codesDialogWarning)).getText();
+    }
+
+    public boolean isWarningIconDisplayed() {
+        try {
+            return driver.findElement(codesDialogWarningIcon).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public String getCodesDialogInstructionText() {
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(codesDialogInstruction)).getText();
+    }
+
+    // --- Action button verification methods ---
+
+    public boolean isPrintButtonDisplayed() {
+        try {
+            return driver.findElement(printButton).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isCopyButtonDisplayed() {
+        try {
+            return driver.findElement(copyButton).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public String getDownloadButtonAriaLabel() {
+        return driver.findElement(downloadButton).getAttribute("aria-label");
+    }
+
+    public String getPrintButtonAriaLabel() {
+        return driver.findElement(printButton).getAttribute("aria-label");
+    }
+
+    public String getCopyButtonAriaLabel() {
+        return driver.findElement(copyButton).getAttribute("aria-label");
+    }
+
+    public String getDownloadButtonIconText() {
+        return driver.findElement(downloadButton).findElement(By.cssSelector("mat-icon")).getText();
+    }
+
+    public String getPrintButtonIconText() {
+        return driver.findElement(printButton).findElement(By.cssSelector("mat-icon")).getText();
+    }
+
+    public String getCopyButtonIconText() {
+        return driver.findElement(copyButton).findElement(By.cssSelector("mat-icon")).getText();
+    }
+
+    // --- Close button state ---
+
+    public boolean isCloseButtonEnabled() {
+        try {
+            return driver.findElement(closeButton).isEnabled();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // --- Click outside dialog (backdrop) ---
+
+    public void clickBackdrop() {
+        WebElement overlay = wait.until(ExpectedConditions.presenceOfElementLocated(backdrop));
+        // Click at coordinates offset from center to ensure we hit the backdrop, not the dialog
+        new org.openqa.selenium.interactions.Actions(driver)
+                .moveToElement(overlay, -overlay.getSize().getWidth() / 2 + 5, 0)
+                .click()
+                .perform();
+    }
+
+    // --- Copy button clipboard content ---
+
+    public void clickCopyButton() {
+        wait.until(ExpectedConditions.elementToBeClickable(copyButton)).click();
+    }
+
+    /**
+     * Reads the clipboard content via CDP after the Copy button has been clicked.
+     * Grants clipboardReadWrite permission first, then reads via the Clipboard API.
+     */
+    public List<String> readClipboardCodes() {
+        if (driver instanceof ChromeDriver chromeDriver) {
+            chromeDriver.executeCdpCommand("Browser.grantPermissions",
+                    Map.of("permissions", List.of("clipboardReadWrite")));
+        }
+
+        String clipboard = (String) ((JavascriptExecutor) driver).executeAsyncScript(
+                "var cb = arguments[arguments.length - 1];" +
+                "navigator.clipboard.readText()" +
+                ".then(function(text) { cb(text); })" +
+                ".catch(function(e) { cb(''); });");
+
+        if (clipboard == null || clipboard.isBlank()) return List.of();
+        return Arrays.asList(clipboard.split(","));
+    }
+
+    public boolean hasCopySnackbar() {
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(5))
+                    .until(ExpectedConditions.visibilityOfElementLocated(snackbarContainer));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public String getCopySnackbarMessage() {
+        try {
+            WebElement snackbar = new WebDriverWait(driver, Duration.ofSeconds(5))
+                    .until(ExpectedConditions.visibilityOfElementLocated(snackbarContainer));
+            return snackbar.getText().trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    // --- Download button ---
+
+    public void clickDownloadButton() {
+        wait.until(ExpectedConditions.elementToBeClickable(downloadButton)).click();
+    }
+
+    public void clickCloseButton() {
+        wait.until(ExpectedConditions.elementToBeClickable(closeButton)).click();
+        wait.until(ExpectedConditions.invisibilityOfElementLocated(dialogContainer));
     }
 }
