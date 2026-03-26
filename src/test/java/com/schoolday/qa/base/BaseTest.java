@@ -32,8 +32,11 @@ public abstract class BaseTest {
     protected WebDriverWait wait;
     protected Properties config;
 
-    private static final Path CODES_FILE = Path.of("SchoolDay_reset_codes.txt");
     private static final Path DOWNLOAD_DIR = Path.of("build/downloads").toAbsolutePath();
+
+    protected Path getCodesFile() {
+        return Path.of("vendor/SchoolDay_reset_codes.txt");
+    }
 
     @BeforeEach
     protected void setUp() throws IOException {
@@ -90,7 +93,7 @@ public abstract class BaseTest {
      * Marks the consumed code with USED: prefix so subsequent calls skip it.
      */
     protected String consumeRecoveryCode() throws IOException {
-        List<String> lines = new ArrayList<>(Files.readAllLines(CODES_FILE));
+        List<String> lines = new ArrayList<>(Files.readAllLines(getCodesFile()));
 
         String code = null;
         int codeIndex = -1;
@@ -104,11 +107,11 @@ public abstract class BaseTest {
         }
 
         if (code == null) {
-            throw new IllegalStateException("No recovery codes remaining in " + CODES_FILE);
+            throw new IllegalStateException("No recovery codes remaining in " + getCodesFile());
         }
 
         lines.set(codeIndex, "USED:" + code);
-        Files.write(CODES_FILE, lines);
+        Files.write(getCodesFile(), lines);
 
         return code;
     }
@@ -117,7 +120,7 @@ public abstract class BaseTest {
      * Returns a previously used recovery code (one already marked with USED: prefix).
      */
     protected String getUsedRecoveryCode() throws IOException {
-        List<String> lines = Files.readAllLines(CODES_FILE);
+        List<String> lines = Files.readAllLines(getCodesFile());
 
         for (String line : lines) {
             String trimmed = line.trim();
@@ -126,7 +129,7 @@ public abstract class BaseTest {
             }
         }
 
-        throw new IllegalStateException("No USED recovery codes found in " + CODES_FILE);
+        throw new IllegalStateException("No USED recovery codes found in " + getCodesFile());
     }
 
     /**
@@ -162,16 +165,16 @@ public abstract class BaseTest {
     /**
      * Returns true if the codes file contains at least one USED: code.
      */
-    protected static boolean hasUsedRecoveryCodes() throws IOException {
-        return Files.readAllLines(CODES_FILE).stream()
+    protected boolean hasUsedRecoveryCodes() throws IOException {
+        return Files.readAllLines(getCodesFile()).stream()
                 .anyMatch(l -> l.trim().startsWith("USED:"));
     }
 
     /**
      * Counts unused (not USED:-prefixed, not blank) recovery codes in the codes file.
      */
-    protected static long countUnusedCodes() throws IOException {
-        return Files.readAllLines(CODES_FILE).stream()
+    protected long countUnusedCodes() throws IOException {
+        return Files.readAllLines(getCodesFile()).stream()
                 .map(String::trim)
                 .filter(l -> !l.isBlank() && !l.startsWith("USED:") && !l.startsWith("INVALIDATED:"))
                 .count();
@@ -183,8 +186,8 @@ public abstract class BaseTest {
      * keeps USED: codes for reference, and appends new codes at the end.
      */
     protected void saveNewRecoveryCodes(List<String> codes) throws IOException {
-        List<String> existingLines = Files.exists(CODES_FILE)
-                ? new ArrayList<>(Files.readAllLines(CODES_FILE))
+        List<String> existingLines = Files.exists(getCodesFile())
+                ? new ArrayList<>(Files.readAllLines(getCodesFile()))
                 : new ArrayList<>();
 
         // Collect all old codes (USED + INVALIDATED + unused) and keep only the last 6
@@ -204,15 +207,15 @@ public abstract class BaseTest {
 
         // Append new codes
         kept.addAll(codes);
-        Files.write(CODES_FILE, kept);
+        Files.write(getCodesFile(), kept);
     }
 
     /**
      * Returns all old codes (USED and INVALIDATED) from the codes file for comparison.
      */
-    protected static List<String> getOldCodes() throws IOException {
-        if (!Files.exists(CODES_FILE)) return List.of();
-        return Files.readAllLines(CODES_FILE).stream()
+    protected List<String> getOldCodes() throws IOException {
+        if (!Files.exists(getCodesFile())) return List.of();
+        return Files.readAllLines(getCodesFile()).stream()
                 .map(String::trim)
                 .filter(l -> l.startsWith("USED:") || l.startsWith("INVALIDATED:"))
                 .map(l -> l.startsWith("USED:") ? l.substring("USED:".length()) :

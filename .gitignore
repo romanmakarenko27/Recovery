@@ -45,5 +45,5 @@ bin/
 ### Test secrets ###
 src/test/resources/test.properties
 src/test/resources/recovery_codes.txt
-credentials.txt
-SchoolDay_reset_codes.txt
+vendor/
+district/
