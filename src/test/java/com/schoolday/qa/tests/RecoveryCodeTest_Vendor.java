@@ -130,7 +130,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
     @Order(2)
     @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-    @DisplayName("Validation, Login & Regenerate Tests (5-23)")
+    @DisplayName("Validation, Login & Regenerate Tests (5-24)")
     class ValidationLoginAndRegenerateTests {
 
         private RecoveryCodePage recoveryCodePage;
@@ -201,6 +201,28 @@ class RecoveryCodeTest_Vendor extends BaseTest {
 
         @Test
         @Order(7)
+        void testRecoveryCodeOverlongInput() {
+            recoveryCodePage.enterRecoveryCode(
+                    "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5bC7dE9fG1hJ3kL5mN7pQ9r");
+            recoveryCodePage.clickConfirm();
+
+            String errorType = recoveryCodePage.waitForAnyError();
+
+            assertNotEquals("none", errorType,
+                    "Either validation error or snackbar error should be shown for overlong input");
+
+            if ("snackbar".equals(errorType)) {
+                assertTrue(hasHttpStatus(403),
+                        "Server should respond with 403 for overlong recovery code");
+                recoveryCodePage.dismissSnackbar();
+            }
+
+            assertTrue(recoveryCodePage.isDisplayed(),
+                    "Should remain on Recovery Code page after overlong input");
+        }
+
+        @Test
+        @Order(8)
         void testRecoveryCodeInvalidCode() {
             recoveryCodePage.enterRecoveryCode("PK9P%vuMbv");
             recoveryCodePage.clickConfirm();
@@ -216,7 +238,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(8)
+        @Order(9)
         void testAlreadyUsedRecoveryCode() throws Exception {
             assumeTrue(hasUsedRecoveryCodes(),
                     "No USED recovery codes in file — skipping");
@@ -238,7 +260,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(9)
+        @Order(10)
         void testSuccessfulRecoveryCodeLogin() throws Exception {
             recoveryCodePage.dismissSnackbar();
 
@@ -254,7 +276,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(10)
+        @Order(11)
         void testNavigateToMyProfile() {
             userProfilePage.clickUserMenu();
             userProfilePage.clickMyProfile();
@@ -269,7 +291,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(11)
+        @Order(12)
         void testNavigateToSecuritySettingsAndOpenDialog() {
             userProfilePage.clickSecuritySettingsTab();
 
@@ -283,7 +305,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(12)
+        @Order(13)
         void testRegenerateDialogElements() {
             assertTrue(regenerateCodesDialog.isDialogDisplayed(), "Dialog should be displayed");
             assertTrue(regenerateCodesDialog.isPasswordInputDisplayed(), "Password input should be visible");
@@ -300,14 +322,14 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(13)
+        @Order(14)
         void testRegenerateButtonDisabledWithEmptyPassword() {
             assertFalse(regenerateCodesDialog.isRegenerateButtonEnabled(),
                     "Regenerate button should be disabled when password is empty");
         }
 
         @Test
-        @Order(14)
+        @Order(15)
         void testPasswordVisibilityToggle() {
             regenerateCodesDialog.enterPassword("TestPassword");
 
@@ -326,9 +348,9 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(15)
+        @Order(16)
         void testInvalidPasswordThenCancelOrRegenerate() throws Exception {
-            // Dialog is already open from test 14
+            // Dialog is already open from test 16
             regenerateCodesDialog.enterPassword("WrongPassword123!");
             regenerateCodesDialog.clickRegenerate();
 
@@ -355,7 +377,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
                     saveNewRecoveryCodes(newCodes);
                 }
 
-                // Dialog stays open for tests 16-23 to verify codes dialog
+                // Dialog stays open for tests 18-25 to verify codes dialog
 
                 assertFalse(newCodes.isEmpty(), "New recovery codes should be generated");
                 assertEquals(6, newCodes.size(),
@@ -372,7 +394,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(16)
+        @Order(17)
         void testCodesDialogElementsDisplayed() {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
@@ -398,7 +420,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(17)
+        @Order(18)
         void testSixUniqueCodesDifferentFromOld() throws Exception {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
@@ -424,7 +446,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(18)
+        @Order(19)
         void testActionButtonsDisplayed() {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
@@ -452,7 +474,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(19)
+        @Order(20)
         void testClickOutsideDialogDoesNotClose() {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
@@ -464,7 +486,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(20)
+        @Order(21)
         void testCloseButtonDisabledBeforeSaveAction() {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
@@ -476,7 +498,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(21)
+        @Order(22)
         void testDownloadEnablesCloseButton() {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
@@ -488,15 +510,15 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(22)
+        @Order(23)
         void testAllSourcesReturnSameCodes() throws IOException {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
 
-            // 1. Dialog codes (already extracted in test 15)
+            // 1. Dialog codes (already extracted in test 17)
             List<String> dialogCodes = newCodes;
 
-            // 2. Download — find the file that was downloaded in test 21
+            // 2. Download — find the file that was downloaded in test 23
             Path downloadDir = getDownloadDir();
             Path downloadedFile = regenerateCodesDialog.findDownloadedFile(downloadDir);
             assertNotNull(downloadedFile, "Downloaded file should exist in " + downloadDir);
@@ -531,7 +553,7 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         }
 
         @Test
-        @Order(23)
+        @Order(24)
         void testCloseDialogAndVerifyCodesSaved() throws Exception {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");

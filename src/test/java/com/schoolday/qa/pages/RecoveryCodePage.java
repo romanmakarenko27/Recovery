@@ -121,6 +121,25 @@ public class RecoveryCodePage {
         }
     }
 
+    /**
+     * Waits for either a client-side validation error or a server-side snackbar error.
+     * Returns "validation", "snackbar", or "none".
+     */
+    public String waitForAnyError() {
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(10))
+                    .until(ExpectedConditions.or(
+                            ExpectedConditions.presenceOfElementLocated(validationError),
+                            ExpectedConditions.visibilityOfElementLocated(snackbarContainer)
+                    ));
+        } catch (Exception e) {
+            return "none";
+        }
+        if (!driver.findElements(validationError).isEmpty()) return "validation";
+        if (!driver.findElements(snackbarContainer).isEmpty()) return "snackbar";
+        return "none";
+    }
+
     public String getSnackbarErrorMessage() {
         new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.visibilityOfElementLocated(snackbarContainer));
