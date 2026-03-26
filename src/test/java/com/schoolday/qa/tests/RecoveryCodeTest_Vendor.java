@@ -8,6 +8,9 @@ import com.schoolday.qa.pages.RegenerateCodesDialog;
 import com.schoolday.qa.pages.UserProfilePage;
 import org.junit.jupiter.api.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 
@@ -138,6 +141,17 @@ class RecoveryCodeTest_Vendor extends BaseTest {
         @BeforeAll
         void initDriver() throws Exception {
             initializeDriver();
+
+            // Clean download directory so findDownloadedFile won't pick up stale files
+            Path dlDir = getDownloadDir();
+            if (Files.exists(dlDir)) {
+                try (var stream = Files.newDirectoryStream(dlDir)) {
+                    for (Path file : stream) {
+                        Files.deleteIfExists(file);
+                    }
+                }
+            }
+
             LoginPage loginPage = new LoginPage(driver);
             loginPage.open(getBaseUrl());
             loginPage.login(getEmail(), getPassword());
@@ -475,10 +489,25 @@ class RecoveryCodeTest_Vendor extends BaseTest {
 
         @Test
         @Order(22)
-        void testCopyShowsSnackbarAndCodesMatch() {
+        void testAllSourcesReturnSameCodes() throws IOException {
             assumeTrue(newCodes != null && !newCodes.isEmpty(),
                     "No regeneration occurred — skipping codes dialog tests");
 
+            // 1. Dialog codes (already extracted in test 15)
+            List<String> dialogCodes = newCodes;
+
+            // 2. Download — find the file that was downloaded in test 21
+            Path downloadDir = getDownloadDir();
+            Path downloadedFile = regenerateCodesDialog.findDownloadedFile(downloadDir);
+            assertNotNull(downloadedFile, "Downloaded file should exist in " + downloadDir);
+            List<String> downloadCodes = regenerateCodesDialog.extractCodesFromDownloadedFile(downloadedFile);
+
+            // 3. Print — suppress native dialog, verify button triggers window.print()
+            regenerateCodesDialog.clickPrintSuppressed();
+            assertTrue(regenerateCodesDialog.wasPrintTriggered(),
+                    "Print button should trigger window.print() or window.open()");
+
+            // 4. Copy → snackbar + clipboard codes
             regenerateCodesDialog.clickCopyButton();
 
             assertTrue(regenerateCodesDialog.hasCopySnackbar(),
@@ -487,12 +516,16 @@ class RecoveryCodeTest_Vendor extends BaseTest {
             assertTrue(snackbarMessage.contains("Copied to Clipboard"),
                     "Snackbar should show 'Copied to Clipboard', but was: " + snackbarMessage);
 
-            // Read clipboard via CDP and compare with displayed codes
-            List<String> copiedCodes = regenerateCodesDialog.readClipboardCodes();
-            assertEquals(newCodes.size(), copiedCodes.size(),
+            List<String> clipboardCodes = regenerateCodesDialog.readClipboardCodes();
+            regenerateCodesDialog.dismissSnackbar();
+
+            // Assert all sources match dialog codes
+            assertEquals(dialogCodes, downloadCodes,
+                    "Downloaded file codes should match dialog codes");
+            assertEquals(dialogCodes.size(), clipboardCodes.size(),
                     "Copied codes count should match displayed codes count");
-            for (int i = 0; i < newCodes.size(); i++) {
-                assertEquals(newCodes.get(i), copiedCodes.get(i),
+            for (int i = 0; i < dialogCodes.size(); i++) {
+                assertEquals(dialogCodes.get(i), clipboardCodes.get(i),
                         "Copied code at index " + i + " should match displayed code");
             }
         }

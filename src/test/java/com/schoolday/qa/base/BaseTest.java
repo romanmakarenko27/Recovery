@@ -20,7 +20,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -31,6 +33,7 @@ public abstract class BaseTest {
     protected Properties config;
 
     private static final Path CODES_FILE = Path.of("SchoolDay_reset_codes.txt");
+    private static final Path DOWNLOAD_DIR = Path.of("build/downloads").toAbsolutePath();
 
     @BeforeEach
     protected void setUp() throws IOException {
@@ -43,6 +46,13 @@ public abstract class BaseTest {
             options.addArguments("--headless=new");
         }
         options.addArguments("--start-maximized");
+
+        // Configure download directory for file download tests
+        Files.createDirectories(DOWNLOAD_DIR);
+        Map<String, Object> prefs = new HashMap<>();
+        prefs.put("download.default_directory", DOWNLOAD_DIR.toString());
+        prefs.put("download.prompt_for_download", false);
+        options.setExperimentalOption("prefs", prefs);
 
         LoggingPreferences logPrefs = new LoggingPreferences();
         logPrefs.enable(LogType.PERFORMANCE, Level.ALL);
@@ -69,6 +79,10 @@ public abstract class BaseTest {
 
     protected String getPassword() {
         return config.getProperty("test.password");
+    }
+
+    protected Path getDownloadDir() {
+        return DOWNLOAD_DIR;
     }
 
     /**

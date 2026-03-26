@@ -16,6 +16,9 @@ dependencies {
     // WebDriverManager (auto-downloads ChromeDriver)
     testImplementation 'io.github.bonigarcia:webdrivermanager:6.3.3'
 
+    // PDFBox (PDF text extraction for recovery codes verification)
+    testImplementation 'org.apache.pdfbox:pdfbox:3.0.4'
+
     // JUnit 5 (keep what you already have)
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'

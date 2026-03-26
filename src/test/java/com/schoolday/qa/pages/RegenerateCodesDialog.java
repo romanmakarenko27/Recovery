@@ -1,5 +1,8 @@
 package com.schoolday.qa.pages;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -8,11 +11,18 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RegenerateCodesDialog {
 
@@ -402,5 +412,130 @@ public class RegenerateCodesDialog {
     public void clickCloseButton() {
         wait.until(ExpectedConditions.elementToBeClickable(closeButton)).click();
         wait.until(ExpectedConditions.invisibilityOfElementLocated(dialogContainer));
+    }
+
+    // --- Download file methods ---
+
+    /**
+     * Waits for a file to appear in the download directory (up to 10 seconds).
+     * Returns the path to the most recently modified file.
+     */
+    public Path findDownloadedFile(Path downloadDir) {
+        WebDriverWait fileWait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        return fileWait.until(d -> {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(downloadDir)) {
+                Path newest = null;
+                long newestTime = 0;
+                for (Path file : stream) {
+                    // Skip Chrome's .crdownload partial files
+                    if (file.toString().endsWith(".crdownload")) continue;
+                    long modified = Files.getLastModifiedTime(file).toMillis();
+                    if (modified > newestTime) {
+                        newestTime = modified;
+                        newest = file;
+                    }
+                }
+                return newest;
+            } catch (IOException e) {
+                return null;
+            }
+        });
+    }
+
+    /**
+     * Reads the downloaded text file and extracts recovery codes (one per line, non-blank).
+     */
+    public List<String> extractCodesFromDownloadedFile(Path filePath) throws IOException {
+        List<String> codes = new ArrayList<>();
+        for (String line : Files.readAllLines(filePath, java.nio.charset.StandardCharsets.ISO_8859_1)) {
+            String trimmed = line.trim();
+            if (!trimmed.isBlank()) {
+                codes.add(trimmed);
+            }
+        }
+        return codes;
+    }
+
+    // --- Print / PDF methods ---
+
+    /**
+     * Captures the current page (with codes dialog visible) as a PDF using CDP Page.printToPDF.
+     * This avoids the Print button's window.print() which blocks the renderer in non-headless mode.
+     */
+    public void captureCurrentPageAsPdf(Path pdfPath) throws IOException {
+        if (driver instanceof ChromeDriver chromeDriver) {
+            Map<String, Object> result = chromeDriver.executeCdpCommand("Page.printToPDF",
+                    Map.of("printBackground", true));
+            String base64Pdf = (String) result.get("data");
+            byte[] pdfBytes = Base64.getDecoder().decode(base64Pdf);
+            Files.createDirectories(pdfPath.getParent());
+            Files.write(pdfPath, pdfBytes);
+        }
+    }
+
+    /**
+     * Extracts recovery codes from a PDF file using PDFBox.
+     * Codes are 10-character strings matching the pattern used by the app.
+     */
+    public List<String> extractCodesFromPdf(Path pdfPath) throws IOException {
+        List<String> codes = new ArrayList<>();
+        try (PDDocument doc = Loader.loadPDF(pdfPath.toFile())) {
+            String text = new PDFTextStripper().getText(doc);
+            // Split by whitespace and match 10-char code-like tokens
+            // (PDF text may have codes mixed with labels, numbering, etc.)
+            Pattern codePattern = Pattern.compile("[A-Za-z0-9%!@#$^&*]{10}");
+            for (String token : text.split("\\s+")) {
+                if (codePattern.matcher(token).matches()) {
+                    codes.add(token);
+                }
+            }
+        }
+        return codes;
+    }
+
+    // --- Print button: suppress window.print() to prevent native dialog ---
+
+    /**
+     * Suppresses window.print() and window.open(), clicks Print, then restores both.
+     * The Print button calls window.print() on the current page — the same content
+     * that CDP Page.printToPDF captures. This method verifies the button is functional
+     * without triggering the native print dialog that would block the renderer.
+     */
+    public void clickPrintSuppressed() {
+        ((JavascriptExecutor) driver).executeScript(
+                "window.__origPrint = window.print;" +
+                "window.__origOpen = window.open;" +
+                "window.__printCalled = false;" +
+                "window.__openCalled = false;" +
+                "window.print = function() { window.__printCalled = true; };" +
+                "window.open = function() {" +
+                "  window.__openCalled = true;" +
+                "  return { document: { write:function(){}, writeln:function(){}, close:function(){} }," +
+                "           print:function(){}, close:function(){}, focus:function(){}," +
+                "           addEventListener:function(){} };" +
+                "};");
+
+        wait.until(ExpectedConditions.elementToBeClickable(printButton)).click();
+
+        // Wait until the click handler invokes print() or open()
+        new WebDriverWait(driver, Duration.ofSeconds(5))
+                .until(d -> {
+                    Boolean printed = (Boolean) ((JavascriptExecutor) d)
+                            .executeScript("return window.__printCalled || window.__openCalled;");
+                    return Boolean.TRUE.equals(printed);
+                });
+
+        // Restore originals
+        ((JavascriptExecutor) driver).executeScript(
+                "window.print = window.__origPrint;" +
+                "window.open = window.__origOpen;");
+    }
+
+    public boolean wasPrintTriggered() {
+        Boolean printCalled = (Boolean) ((JavascriptExecutor) driver)
+                .executeScript("return window.__printCalled === true;");
+        Boolean openCalled = (Boolean) ((JavascriptExecutor) driver)
+                .executeScript("return window.__openCalled === true;");
+        return Boolean.TRUE.equals(printCalled) || Boolean.TRUE.equals(openCalled);
     }
 }
